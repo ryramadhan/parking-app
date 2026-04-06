@@ -1,6 +1,57 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+type TicketData = {
+  id: number;
+  ticket_code: string;
+  entry_time: string;
+  exit_time: string | null;
+  total_price: number | null;
+  qr_data_url?: string;
+};
 
 export default function Home() {
+  const [loading, setLoading] = useState(false);
+  const [ticket, setTicket] = useState<TicketData | null>(null);
+  const [error, setError] = useState("");
+  const router = useRouter();
+
+  const handleMasukParkir = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/tickets", { method: "POST" });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "Gagal membuat tiket");
+      }
+
+      const createdTicket: TicketData = json.data;
+      setTicket(createdTicket);
+
+      // Auto download PDF
+      const pdfUrl = `/api/tickets/${createdTicket.ticket_code}/pdf`;
+      const a = document.createElement("a");
+      a.href = pdfUrl;
+      a.download = `ticket-${createdTicket.ticket_code}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setTimeout(() => {
+        router.push("/pay");
+      }, 500);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
       <div className="w-full max-w-md bg-white rounded-xl shadow p-6">
