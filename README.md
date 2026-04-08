@@ -2,26 +2,48 @@
 
 [![Typing SVG](https://readme-typing-svg.demolab.com?font=Inter&weight=600&size=22&pause=1400&color=2563EB&center=true&vCenter=true&width=760&lines=Web+Parking+System+%F0%9F%9A%97;Ticket+%E2%86%92+Payment+%E2%86%92+Gate+Open+%F0%9F%85%BF%EF%B8%8F)](https://git.io/typing-svg)
 
-A mini parking workflow project built with **Next.js** and **PostgreSQL**.
-It covers ticket creation, QR/PDF ticket generation, payment simulation, and exit processing.
+Mini project alur parkir berbasis **Next.js** dan **PostgreSQL**.
+Mencakup pembuatan tiket, pembuatan QR/PDF tiket, simulasi pembayaran, dan proses keluar.
 
 ## Features
 
-- Generate parking tickets with unique `ticket_code`
-- Store `entry_time`, `exit_time`, and `total_price` in PostgreSQL
-- Generate QR code from ticket data
-- Download PDF ticket (Ticket Code, Entry Time, QR)
-- `/pay` page for QR image upload and decode
-- Pricing rules:
-  - First hour: `5000`
-  - Next hours: `3000/hour`
-- Final status:
-  - **Payment Successful**
-  - **Gate Open**
+- Generate tiket parkir dengan `ticket_code` unik
+- Simpan `entry_time`, `exit_time`, dan `total_price` di PostgreSQL
+- Generate QR code dari data tiket
+- Download tiket PDF (Ticket Code, Entry Time, QR)
+- Halaman `/pay` untuk upload gambar QR dan decode
+- Input `ticket_code` manual sebagai fallback jika scan QR gagal
+- Aturan tarif:
+  - Jam pertama: `5000`
+  - Jam berikutnya: `3000/jam`
+- Status akhir:
+  - **Pembayaran Berhasil**
+  - **Pintu Terbuka**
 
 ## Demo Flow
 
 `🚗 Entry` -> `🎟️ Ticket` -> `📱 QR/PDF` -> `💳 Payment` -> `🚪 Gate Open`
+
+### Aturan Input Pembayaran (Mini Project)
+
+- Tiket didistribusikan dalam bentuk **PDF yang diunduh** (tanpa alur print fisik).
+- Di halaman `/pay`, upload **gambar QR** (disarankan screenshot QR dari PDF tiket).
+- Upload file PDF langsung memang tidak dipakai pada scope mini project ini.
+- Jika QR tidak terdeteksi, masukkan `ticket_code` secara manual.
+
+### Batasan Sistem
+
+- Scanner QR di halaman `/pay` menerima **file gambar**.
+- Untuk scope mini project, pembayaran menggunakan gambar QR dari hasil screenshot PDF tiket.
+- Pemindaian QR langsung dari file PDF tidak diaktifkan.
+- Fallback resmi: input manual `ticket_code`.
+
+## Alur Penggunaan
+
+1. Klik **Buat Tiket Masuk** di halaman utama.
+2. Sistem otomatis mengunduh tiket dalam format PDF.
+3. Buka halaman `/pay`, lalu upload gambar QR (screenshot dari PDF) atau isi `ticket_code` manual.
+4. Klik **Hitung Durasi dan Tarif**, lalu verifikasi status **Pintu Terbuka**.
 
 ## Tech Stack
 
@@ -60,7 +82,7 @@ Open `http://localhost:3000`.
 - `POST /api/tickets` -> create ticket + QR data
 - `GET /api/tickets/[code]` -> get ticket details
 - `GET /api/tickets/[code]/pdf` -> download ticket PDF
-- `POST /api/pay` -> calculate fee + update `exit_time` and `total_price`
+- `POST /api/pay` -> calculate fee + update `exit_time` and `total_price` (idempotent: jika tiket sudah dibayar, endpoint mengembalikan data pembayaran yang sudah ada)
 
 ## Project Structure
 
