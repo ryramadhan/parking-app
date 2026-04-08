@@ -1,5 +1,19 @@
 import pool from "@/lib/db";
 
+function computeHours(entryTime, endTime) {
+    const entry = new Date(entryTime);
+    const end = new Date(endTime);
+    const diffMs = end.getTime() - entry.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return Math.max(1, Math.ceil(diffHours)); // minimal 1 jam
+}
+
+function computeTotalPrice(hours) {
+    let totalPrice = 5000;
+    if (hours > 1) totalPrice += (hours - 1) * 3000;
+    return totalPrice;
+}
+
 export async function POST(request) {
     try {
         const body = await request.json();
@@ -12,7 +26,6 @@ export async function POST(request) {
             );
         }
 
-        // ambil tiket
         const result = await pool.query(
             `
       SELECT id, ticket_code, entry_time, exit_time, total_price
@@ -32,22 +45,31 @@ export async function POST(request) {
 
         const ticket = result.rows[0];
 
-        // hitung durasi (dalam jam, dibulatkan ke atas)
-        const entry = new Date(ticket.entry_time);
-        const now = new Date(); // waktu bayar
-        const diffMs = now.getTime() - entry.getTime();
-        const diffHours = diffMs / (1000 * 60 * 60);
-        const hours = Math.max(1, Math.ceil(diffHours)); // minimal 1 jam
-
-        // aturan tarif:
-        // 1 jam pertama = 5000
-        // selanjutnya = 3000/jam
-        let totalPrice = 5000;
-        if (hours > 1) {
-            totalPrice += (hours - 1) * 3000;
+        // Idempotency: if already paid/processed, do not mutate again.
+        if (ticket.exit_time && ticket.total_price != null) {
+            const hours = computeHours(ticket.entry_time, ticket.exit_time);
+            return Response.json(
+                {
+                    success: true,
+                    data: {
+                        ticket_id: ticket.id,
+                        ticket_code: ticket.ticket_code,
+                        entry_time: ticket.entry_time,
+                        exit_time: ticket.exit_time,
+                        hours,
+                        total_price: ticket.total_price,
+                        already_paid: true,
+                    },
+                },
+                { status: 200 }
+            );
         }
 
-        // simpan exit_time & total_price ke database
+        const now = new Date();
+        const hours = computeHours(ticket.entry_time, now);
+
+        const totalPrice = computeTotalPrice(hours);
+
         const updateResult = await pool.query(
             `
         UPDATE public.tickets
@@ -70,6 +92,7 @@ export async function POST(request) {
                     exit_time: updated.exit_time,
                     hours,
                     total_price: updated.total_price,
+                    already_paid: false,
                 },
             },
             { status: 200 }
